@@ -17,6 +17,9 @@ export const convertDecimalToBn = (input: string) => {
   return ethers.utils.parseUnits(sanitizedInput);
 };
 
+export const tokenAmountBN = (input: number) => {
+  return BigNumber.from(input).mul(BigNumber.from(10).pow(18));
+};
 
 interface IBurnData {
   _from: string,

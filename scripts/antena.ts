@@ -1,5 +1,4 @@
 import { BigNumber, ethers } from "ethers";
-import { NetworkBridge } from "../typechain";
 import { BSC_NETWORK, BSC_PROVIDER, RINKEBY_NETWORK, RINKEBY_PROVIDER } from "./networks";
 import { burnTokenFromBridgeAcc, convertBnToDecimal, getWalletByPK, mintTokenToSender } from "./utils";
 
