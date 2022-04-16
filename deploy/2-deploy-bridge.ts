@@ -17,5 +17,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.tags = ['deploy-bridge'];
 export default func;
-// hh --network bsc-testnet deploy --tags deploy-bridge && hh --network rinkeby deploy --tags deploy-bridge && hh --network goerli deploy --tags deploy-bridge 
+// npx hardhat --network bsc-testnet deploy --tags deploy-bridge && npx hardhat --network rinkeby deploy --tags deploy-bridge && npx hardhat --network goerli deploy --tags deploy-bridge 
 
