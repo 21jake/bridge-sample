@@ -2,13 +2,13 @@ import { BigNumber } from "ethers";
 import { networks } from "./networks";
 import { convertBnToDecimal, getWalletByPK } from "./utils";
 
-const { TESTNET_STAKING_ADDR_PRIVATE_KEY: ADMIN_BRIDGE_PK } = process.env;
+const { TESTNET_BRIDGE_ADMIN_PRIVATE_KEY: BRIDGE_ADMIN_PK } = process.env;
 
 const chainIds = Object.keys(networks);
 
 chainIds.forEach(chainId => {
     const network = networks[Number(chainId)];
-    const bridgeAdmin = getWalletByPK(ADMIN_BRIDGE_PK as string, network.provider);
+    const bridgeAdmin = getWalletByPK(BRIDGE_ADMIN_PK as string, network.provider);
 
 
     network.tokenContract.on('Transfer',async (_from: string, _to: string, _value: BigNumber) => {
@@ -24,7 +24,7 @@ chainIds.forEach(chainId => {
     network.bridgeContract.on('Burn',async (_from: string, _value: BigNumber, chainId: BigNumber) => {
         console.log("----BEGIN LOGGING BURNING----");
         const chosenNetwork = networks[chainId.toNumber()];
-        const chosenNetworkBridgeAdmin = getWalletByPK(ADMIN_BRIDGE_PK as string, chosenNetwork.provider);
+        const chosenNetworkBridgeAdmin = getWalletByPK(BRIDGE_ADMIN_PK as string, chosenNetwork.provider);
         const tx = await chosenNetwork.bridgeContract.connect(chosenNetworkBridgeAdmin).mint(_from, _value);
         const receipt = await tx.wait();
         console.log(`${_from} transfered ${convertBnToDecimal(_value)} from ${network.name} to ${chosenNetwork.name}`)

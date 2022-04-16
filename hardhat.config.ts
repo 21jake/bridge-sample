@@ -40,7 +40,7 @@ const config: HardhatUserConfig = {
       url: process.env.BSC_TESTNET_URL,
       accounts: [
         process.env.TESTNET_DEPLOYER_PRIVATE_KEY as string,
-        process.env.TESTNET_STAKING_ADDR_PRIVATE_KEY as string,
+        process.env.TESTNET_BRIDGE_ADMIN_PRIVATE_KEY as string,
       ],
       chainId: 97,
     },
@@ -48,7 +48,7 @@ const config: HardhatUserConfig = {
       url: process.env.RINKEBY_URL,
       accounts: [
         process.env.TESTNET_DEPLOYER_PRIVATE_KEY as string,
-        process.env.TESTNET_STAKING_ADDR_PRIVATE_KEY as string,
+        process.env.TESTNET_BRIDGE_ADMIN_PRIVATE_KEY as string,
       ],
       chainId: 4,
     },
@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
       url: process.env.GOERLI_URL,
       accounts: [
         process.env.TESTNET_DEPLOYER_PRIVATE_KEY as string,
-        process.env.TESTNET_STAKING_ADDR_PRIVATE_KEY as string,
+        process.env.TESTNET_BRIDGE_ADMIN_PRIVATE_KEY as string,
       ],
       chainId: 5,
     },
