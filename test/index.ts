@@ -107,23 +107,22 @@ describe('BRIDGE', function () {
     const initUserBalance = tokenAmountBN(10_000);
     const lockedAmount = tokenAmountBN(5_000);
 
-
     beforeEach(async () => {
       await TokenInstance.connect(tokenDeployer).transfer(user.address, initUserBalance);
-      
+
       // Assume everytime an user transfer to bridge, bridge admin call lock function
       await TokenInstance.connect(user).transfer(BridgeInstance.address, lockedAmount);
       await BridgeInstance.connect(bridgeAdmin).lock(user.address, lockedAmount);
-    })
+    });
 
-    it("Only brige admin can call `mint` and `lock` function", async () => {
+    it('Only brige admin can call `mint` and `lock` function', async () => {
       await expect(BridgeInstance.connect(tokenDeployer).lock(user.address, lockedAmount)).to.be.reverted;
       await expect(BridgeInstance.connect(tokenDeployer).mint(user.address, lockedAmount)).to.be.reverted;
       await expect(BridgeInstance.connect(bridgeAdmin).lock(user.address, lockedAmount)).to.be.not.reverted;
       await expect(BridgeInstance.connect(bridgeAdmin).mint(user.address, lockedAmount)).to.be.not.reverted;
-    })
+    });
 
-    it("Admin bridge can mint token to chosen address", async () => {
+    it('Admin bridge can mint token to chosen address', async () => {
       const userBalance_1 = await TokenInstance.balanceOf(user.address);
       const totalSupply_1 = await TokenInstance.totalSupply();
 
@@ -135,45 +134,44 @@ describe('BRIDGE', function () {
 
       expect(totalSupply_1).to.equal(totalSupply_2.sub(mintAmount));
       expect(userBalance_1).to.equal(userBalance_2.sub(mintAmount));
+    });
 
-    })
-
-    it("Locked value is increased when user transfer to bridge", async () => {
+    it('Locked value is increased when user transfer to bridge', async () => {
       const lockedValue_1 = await BridgeInstance.locked(user.address);
 
       const extralockedValue = tokenAmountBN(1_000);
-    
-      await expect(BridgeInstance.connect(bridgeAdmin).lock(user.address, extralockedValue))
-      .to.emit(BridgeInstance, 'Lock')
-      .withArgs(user.address, extralockedValue);
-      
-      const lockedValue_2 = await BridgeInstance.locked(user.address);
-  
-      expect(lockedValue_1).to.equal(lockedValue_2.sub(extralockedValue));
-    })
 
-    it("User can withdraw from locked value", async () => {
+      await expect(BridgeInstance.connect(bridgeAdmin).lock(user.address, extralockedValue))
+        .to.emit(BridgeInstance, 'Lock')
+        .withArgs(user.address, extralockedValue);
+
+      const lockedValue_2 = await BridgeInstance.locked(user.address);
+
+      expect(lockedValue_1).to.equal(lockedValue_2.sub(extralockedValue));
+    });
+
+    it('User can withdraw from locked value', async () => {
       const lockedValue_1 = await BridgeInstance.locked(user.address);
       const userBalance_1 = await TokenInstance.balanceOf(user.address);
       const bridgeBalance_1 = await TokenInstance.balanceOf(BridgeInstance.address);
-      
+
       const withdrawAmount = lockedValue_1.div(2);
 
-      await expect(BridgeInstance.connect(user).withdraw(lockedValue_1.add(1))).to.be.revertedWith("Bridge: Insufficient locked amount");
+      await expect(BridgeInstance.connect(user).withdraw(lockedValue_1.add(1))).to.be.revertedWith(
+        'Bridge: Insufficient locked amount'
+      );
       await expect(BridgeInstance.connect(user).withdraw(withdrawAmount)).to.be.not.reverted;
 
       const lockedValue_2 = await BridgeInstance.locked(user.address);
       const userBalance_2 = await TokenInstance.balanceOf(user.address);
       const bridgeBalance_2 = await TokenInstance.balanceOf(BridgeInstance.address);
 
-
       expect(lockedValue_1).to.equal(lockedValue_2.add(withdrawAmount));
       expect(userBalance_1).to.equal(userBalance_2.sub(withdrawAmount));
       expect(bridgeBalance_1).to.equal(bridgeBalance_2.add(withdrawAmount));
+    });
 
-    })
-
-    it("User with locked tokens can burn their tokens",async () => {
+    it('User with locked tokens can burn their tokens', async () => {
       const lockedValue_1 = await BridgeInstance.locked(user.address);
       const bridgeBalance_1 = await TokenInstance.balanceOf(BridgeInstance.address);
       const totalSupply_1 = await TokenInstance.totalSupply();
@@ -181,8 +179,12 @@ describe('BRIDGE', function () {
       const burnAmount = lockedValue_1.div(2);
       const chainId = 4;
 
-      await expect(BridgeInstance.connect(user).burn(lockedValue_1.add(1), chainId )).to.be.revertedWith("Bridge: Insufficient locked amount");
-      await expect(BridgeInstance.connect(user).burn(burnAmount, chainId )).to.be.not.reverted;
+      await expect(BridgeInstance.connect(user).burn(lockedValue_1.add(1), chainId)).to.be.revertedWith(
+        'Bridge: Insufficient locked amount'
+      );
+      await expect(BridgeInstance.connect(user).burn(burnAmount, chainId))
+        .to.emit(BridgeInstance, 'Burn')
+        .withArgs(user.address, burnAmount, chainId);
 
       const lockedValue_2 = await BridgeInstance.locked(user.address);
       const bridgeBalance_2 = await TokenInstance.balanceOf(BridgeInstance.address);
@@ -191,9 +193,7 @@ describe('BRIDGE', function () {
       expect(lockedValue_1).to.equal(lockedValue_2.add(burnAmount));
       expect(bridgeBalance_1).to.equal(bridgeBalance_2.add(burnAmount));
       expect(totalSupply_1).to.equal(totalSupply_2.add(burnAmount));
-
-    })
-
+    });
   });
 });
 /**

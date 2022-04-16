@@ -1,66 +1,41 @@
-import { BigNumber, ethers } from "ethers";
-import { BSC_NETWORK, BSC_PROVIDER, RINKEBY_NETWORK, RINKEBY_PROVIDER } from "./networks";
-import { burnTokenFromBridgeAcc, convertBnToDecimal, getWalletByPK, mintTokenToSender } from "./utils";
+import { BigNumber } from "ethers";
+import { networks } from "./networks";
+import { convertBnToDecimal, getWalletByPK } from "./utils";
 
 const { TESTNET_STAKING_ADDR_PRIVATE_KEY: ADMIN_BRIDGE_PK } = process.env;
 
-const rinkebyBridgeAdmin = getWalletByPK(ADMIN_BRIDGE_PK as string, RINKEBY_PROVIDER);
-const bscBridgeAdmin = getWalletByPK(ADMIN_BRIDGE_PK as string, BSC_PROVIDER);
+const chainIds = Object.keys(networks);
+
+chainIds.forEach(chainId => {
+    const network = networks[Number(chainId)];
+    const bridgeAdmin = getWalletByPK(ADMIN_BRIDGE_PK as string, network.provider);
 
 
-// On network A, user transfer token to the bridge
-// A listener signals the bridge's admin calling the bridge contract to burn the transfered token
-// A Burn event from network A is emitted
-// A listener signals the bridge's admin of network B to mint the burnt amount to the user
-// A mint event is emitted
+    network.tokenContract.on('Transfer',async (_from: string, _to: string, _value: BigNumber) => {
+        if (_to !== network.bridgeContract.address) return;
+        console.log("----BEGIN LOGGING LOCKING----");
+        const tx = await network.bridgeContract.connect(bridgeAdmin).lock(_from, _value);
+        const receipt = await tx.wait();
+        console.log(`${_from} locked ${convertBnToDecimal(_value)} tokens on ${network.name} network`)
+        console.log(`Tokens locking tx: ${receipt.transactionHash}`);
+        console.log("----END LOGGING LOCKING----");
+    })
 
-// BEGIN HANDLING ON RINKEBY
+    network.bridgeContract.on('Burn',async (_from: string, _value: BigNumber, chainId: BigNumber) => {
+        console.log("----BEGIN LOGGING BURNING----");
+        const chosenNetwork = networks[chainId.toNumber()];
+        const chosenNetworkBridgeAdmin = getWalletByPK(ADMIN_BRIDGE_PK as string, chosenNetwork.provider);
+        const tx = await chosenNetwork.bridgeContract.connect(chosenNetworkBridgeAdmin).mint(_from, _value);
+        const receipt = await tx.wait();
+        console.log(`${_from} transfered ${convertBnToDecimal(_value)} from ${network.name} to ${chosenNetwork.name}`)
+        console.log(`Token minting tx ${receipt.transactionHash}`);
+        console.log("----END LOGGING BURNING----");
+    })
+});
 
-RINKEBY_NETWORK.tokenContract.on(
-    'Transfer',
-    async (_from: string, _to: string, _value: BigNumber) => {
-        if (_to !== RINKEBY_NETWORK.bridgeContract.address) return;
-        console.log(`Rinkeby bridge contract received ${convertBnToDecimal(_value)} tokens from ${_from}, attempting to burn`);
-        await burnTokenFromBridgeAcc(RINKEBY_NETWORK.bridgeContract, rinkebyBridgeAdmin, {_from, _value})
-      }
-);
-  
-RINKEBY_NETWORK.bridgeContract.on("Burn",async (_sender: string, _value: BigNumber) => {
-    console.log(`Successful burn attempt on Rinkeby. ${convertBnToDecimal(_value)} tokens are burnt from bridge's account`);
-    console.log(`Burn event emitted on Rinkeby network, attempting to mint to ${_sender} on BSC network`);
-
-    await mintTokenToSender(BSC_NETWORK.bridgeContract, bscBridgeAdmin, {_sender, _value});
-})
-
-BSC_NETWORK.bridgeContract.on("Mint",async (_sender: string, _amount: BigNumber) => {
-    console.log(`Successful mint attempt on BSC. ${convertBnToDecimal(_amount)} tokens are minted to ${_sender}`);
-    console.log('------------------------------');
-    
-})
-
-// END HANDLING ON RINKEBY
-
-// BEGIN HANDLING ON BSC
-
-BSC_NETWORK.tokenContract.on(
-    'Transfer',
-    async (_from: string, _to: string, _value: BigNumber, _event: ethers.Event ) => {
-        if (_to !== BSC_NETWORK.bridgeContract.address) return;
-        console.log(`BSC bridge contract received ${convertBnToDecimal(_value)} tokens from ${_from}, attempting to burn`);
-        await burnTokenFromBridgeAcc(BSC_NETWORK.bridgeContract, bscBridgeAdmin, {_from, _value})
-      }
-);
-
-BSC_NETWORK.bridgeContract.on("Burn",async (_sender: string, _value: BigNumber) => {
-    console.log(`Successful burn attempt on BSC. ${convertBnToDecimal(_value)} tokens are burnt from bridge's account`);
-    console.log(`Burn event emitted on BSC network, attempting to mint to ${_sender} on Rinkeby network`);
-
-    await mintTokenToSender(RINKEBY_NETWORK.bridgeContract, rinkebyBridgeAdmin, {_sender, _value});
-})
-
-RINKEBY_NETWORK.bridgeContract.on("Mint",async (_sender: string, _amount: BigNumber) => {
-    console.log(`Successful mint attempt on Rinkeby. ${convertBnToDecimal(_amount)} tokens are minted to ${_sender}`);
-    console.log('------------------------------');
-})
-
-// END HANDLING ON BSC
+/**
+ * 1. Everytime user transfer to bridge contract, bridge admin calling lock function => Lock event emitted
+ * 2. User can withdraw from locked amount => Token transfered
+ * 3. User can burn locked token, a Burn event is emitted with chainId
+ * 4. Bridge can mint token to a specific address
+ */

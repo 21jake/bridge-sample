@@ -43,3 +43,11 @@ export const mintTokenToSender = async (bridgeContract: NetworkBridge, bridgeAdm
   const receipt = await mintTx.wait();
   console.log(`Mint tx hash: ${receipt.transactionHash}`)
 }
+
+export function sleep(milliseconds: number) {
+  const date = Date.now();
+  let currentDate = null;
+  do {
+    currentDate = Date.now();
+  } while (currentDate - date < milliseconds);
+}

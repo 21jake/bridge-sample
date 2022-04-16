@@ -1,46 +1,39 @@
-import { BSC_NETWORK, BSC_PROVIDER, RINKEBY_NETWORK, RINKEBY_PROVIDER } from "./networks";
-import bscBridgeArtifact from "../deployments/bsc-testnet/NetworkBridge";
-import rinkebyBridgeArtifact from "../deployments/rinkeby/NetworkBridge";
+import { networks } from './networks';
 import { getWalletByPK } from "./utils";
-
 
 const { TESTNET_DEPLOYER_PRIVATE_KEY } = process.env;
 
-const assignBridgeAddress = async () => {
+const authorizeBridgeContracts = async () => {
+
+  const chainIds = Object.keys(networks);
+
+  for (let index = 0; index < chainIds.length; index++) {
+    const chainId = Number(chainIds[index])
+
+    const network = networks[chainId];
     
-    const bscDeployerWallet = getWalletByPK(TESTNET_DEPLOYER_PRIVATE_KEY as string, BSC_PROVIDER);
-    const bscMinterRole = await BSC_NETWORK.tokenContract.MINTER_ROLE();
-    const bscBurnerRole = await BSC_NETWORK.tokenContract.BURNER_ROLE();
-    const bscContractWithSigner = await BSC_NETWORK.tokenContract.connect(bscDeployerWallet);
+    const deployerWallet = getWalletByPK(TESTNET_DEPLOYER_PRIVATE_KEY as string, network.provider);
 
-    const bscGrantMinterTx = await bscContractWithSigner.grantRole(bscMinterRole, bscBridgeArtifact.address);
-    await bscGrantMinterTx.wait();
-    console.log("bscGrantMinterTx: ", bscGrantMinterTx);
-    const bscGrantBurnerTx = await bscContractWithSigner.grantRole(bscBurnerRole, bscBridgeArtifact.address);
-    await bscGrantBurnerTx.wait();
-    console.log("bscGrantBurnerTx: ", bscGrantBurnerTx);
+    const burnerRole = await network.tokenContract.BURNER_ROLE();
+    const minterRole = await network.tokenContract.MINTER_ROLE();
+    const contractWithSigner = await network.tokenContract.connect(deployerWallet);
 
+    const grantMinterTx = await contractWithSigner.grantRole(minterRole, network.bridgeContract.address);
+    const grantMinterHash = await grantMinterTx.wait();
+    console.log(`Successfully assigned minter role to bridge contract on ${network.name}. TxHash: ${grantMinterHash.transactionHash}`);
 
-    const rinkebyDeployerWallet = getWalletByPK(TESTNET_DEPLOYER_PRIVATE_KEY as string, RINKEBY_PROVIDER);
-    const rinkebyMinterRole = await RINKEBY_NETWORK.tokenContract.MINTER_ROLE();
-    const rinkebyBurnerRole = await RINKEBY_NETWORK.tokenContract.BURNER_ROLE();
-    const rinkebyContractWithSigner = await RINKEBY_NETWORK.tokenContract.connect(rinkebyDeployerWallet);
-
-    const rinkebyGrantMinterTx = await rinkebyContractWithSigner.grantRole(rinkebyMinterRole, rinkebyBridgeArtifact.address);
-    await rinkebyGrantMinterTx.wait();
-    console.log("rinkebyGrantMinterTx: ", rinkebyGrantMinterTx);
-    const rinkebyGrantBurnerTx = await rinkebyContractWithSigner.grantRole(rinkebyBurnerRole, rinkebyBridgeArtifact.address);
-    await rinkebyGrantBurnerTx.wait();
-    console.log("rinkebyGrantBurnerTx: ", rinkebyGrantBurnerTx);
+    const grantBurnerTx = await contractWithSigner.grantRole(burnerRole, network.bridgeContract.address);
+    const grantBurnerHash = await grantBurnerTx.wait();
+    console.log(`Successfully assigned burner role to bridge contract on ${network.name}. TxHash: ${grantBurnerHash.transactionHash}`);
+    
+  }
 
 }
 
 const main = async () => {
-    await assignBridgeAddress();
+    await authorizeBridgeContracts();
 };
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;

@@ -16,6 +16,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.tags = ['deploy-token'];
 export default func;
-// 1. hh --network bsc-testnet deploy --tags deploy-token
-// 2. hh run ./scripts/BO/manageRoles.ts && hh run ./scripts/BO/createListing.ts
-// 3. hh run ./scripts/BO/listingManagement.ts && hh run ./scripts/tokenActions.ts
+// 1. hh --network bsc-testnet deploy --tags deploy-token && hh --network rinkeby deploy --tags deploy-token && hh --network goerli deploy --tags deploy-token
